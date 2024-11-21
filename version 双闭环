@@ -147,7 +147,7 @@ int main(void)
         // 电流控制
         current_output = PID_Compute(&current_pid, speed_output, measured_current); // 计算电流控制输出
         // 将电流控制输出转换为 PWM 占空比
-        if (speed_output < 10) current_output = 10; // 限制最小值
+        if (current_output < 10) current_output = 10; // 限制最小值
         if (current_output > 100) current_output = 100; // 限制最大值
 				pwmval1 = current_output;
 							
