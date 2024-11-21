@@ -5,13 +5,17 @@
 #include "pwm.h"
 #include "lcd.h"
 #include "adc.h"
+#include "timer.h"
 
 // 声明TIM1_PWM_Init函数
 void TIM1_PWM_Init(u32 arr, u32 psc);
-void TIM8_PWM_Init(u32 arr, u32 psc);
+void TIM8_PWM_Init(u32 arr, u32 psc);//设置互补波
+
 TIM9_Init();
-TIM3_Init();
+TIM3_Init();//测转速用
+
 NVIC_PriorityGroupConfig(NVIC_PriorityGroup_2);
+
 int main(void)
 { 
     u16 pwmval = 50; // 初始占空比，范围：0-100
