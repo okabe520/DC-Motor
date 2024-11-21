@@ -11,15 +11,13 @@
 void TIM1_PWM_Init(u32 arr, u32 psc);
 void TIM8_PWM_Init(u32 arr, u32 psc);//设置互补波
 
-TIM9_Init();
-TIM3_Init();//测转速用
 
-NVIC_PriorityGroupConfig(NVIC_PriorityGroup_2);
+extern int rpm;
 
 int main(void)
 { 
-    u16 pwmval = 50; // 初始占空比，范围：0-100
-		u16 pwmval1 =100; // 初始占空比，范围：0-100
+    u16 pwmval = 100; // 初始占空比，范围：0-100
+		u16 pwmval1 =50; // 初始占空比，范围：0-100
 	
 	 	u16 uadc,IU,IV;
 		float temp,temp1,temp2;
@@ -31,6 +29,9 @@ int main(void)
     TIM1_PWM_Init(100-1, 84-1); // 初始化TIM1的PWM，设置频率和占空比精度为100
 		TIM8_PWM_Init(100-1, 84-1); // 初始化TIM1的PWM，设置频率和占空比精度为100
 	
+	  TIM5_CH1_Cap_Init(0xFFFFFFFF, 84 - 1); // 输入捕获，1us计数
+    TIM3_Init(10000 - 1, 8400 - 1);        // 定时器统计周期1s
+	
 		LCD_Init();         //初始化LCD接口
 	
 		Adc_Init();         //初始化ADC
@@ -41,10 +42,13 @@ int main(void)
 		LCD_ShowString(30,150,200,16,16,"UADC:0.000V");	//先在固定位置显示小数点   
 		LCD_ShowString(30,190,200,16,16,"IU:0.000V");	//先在固定位置显示小数点 
 		LCD_ShowString(30,230,200,16,16,"IV:0.000V");	//先在固定位置显示小数点 	
-		LCD_ShowString(30,270,200,16,16,"rpm:0")
+		LCD_ShowString(30,270,200,16,16,"rpm:0");
     while(1) 
     {
         delay_ms(10); // 控制更新速度，可根据需要调整
+			
+				Calculate_Speed();  // 计算并打印转速
+			
         // 只需设置主通道的占空比，互补通道会自动输出互补信号
         TIM_SetCompare1(TIM1, pwmval);   // 设置主通道1的占空比
 				TIM_SetCompare1(TIM8, pwmval1);   // 设置主通道1的占空比
@@ -67,7 +71,7 @@ int main(void)
 				LCD_ShowxNum(69,150,uadc,1,16,0);    //显示电压值的整数部分，3.1111的话，这里就是显示3
 				LCD_ShowxNum(55,190,IU,1,16,0);
 				LCD_ShowxNum(55,230,IV,1,16,0);
-	                       LCD_ShowxNum(62,270,rpm,1,16,0);
+	      LCD_ShowxNum(62,270,rpm,4,16,0);
 				
 				temp-=uadc;                           //把已经显示的整数部分去掉，留下小数部分，比如3.1111-3=0.1111
 				temp1-=IU;
@@ -82,4 +86,4 @@ int main(void)
 				LCD_ShowxNum(71,230,temp,3,16,0X80);
 	                
     }
-}
+	}
