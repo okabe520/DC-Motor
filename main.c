@@ -9,6 +9,9 @@
 // 声明TIM1_PWM_Init函数
 void TIM1_PWM_Init(u32 arr, u32 psc);
 void TIM8_PWM_Init(u32 arr, u32 psc);
+TIM9_Init();
+TIM3_Init();
+NVIC_PriorityGroupConfig(NVIC_PriorityGroup_2);
 int main(void)
 { 
     u16 pwmval = 50; // 初始占空比，范围：0-100
@@ -34,7 +37,7 @@ int main(void)
 		LCD_ShowString(30,150,200,16,16,"UADC:0.000V");	//先在固定位置显示小数点   
 		LCD_ShowString(30,190,200,16,16,"IU:0.000V");	//先在固定位置显示小数点 
 		LCD_ShowString(30,230,200,16,16,"IV:0.000V");	//先在固定位置显示小数点 	
-		
+		LCD_ShowString(30,270,200,16,16,"rpm:0")
     while(1) 
     {
         delay_ms(10); // 控制更新速度，可根据需要调整
@@ -60,6 +63,7 @@ int main(void)
 				LCD_ShowxNum(69,150,uadc,1,16,0);    //显示电压值的整数部分，3.1111的话，这里就是显示3
 				LCD_ShowxNum(55,190,IU,1,16,0);
 				LCD_ShowxNum(55,230,IV,1,16,0);
+	                       LCD_ShowxNum(62,270,rpm,1,16,0);
 				
 				temp-=uadc;                           //把已经显示的整数部分去掉，留下小数部分，比如3.1111-3=0.1111
 				temp1-=IU;
@@ -72,5 +76,6 @@ int main(void)
 				LCD_ShowxNum(85,150,temp,3,16,0X80); //显示小数部分（前面转换为了整形显示），这里显示的就是111.
 				LCD_ShowxNum(71,190,temp,3,16,0X80);
 				LCD_ShowxNum(71,230,temp,3,16,0X80);
+	                
     }
 }
