@@ -6,6 +6,43 @@
 #include "lcd.h"
 #include "adc.h"
 #include "timer.h"
+#include "stm32f4xx.h"  
+// PID 控制器结构体
+typedef struct {
+    float Kp;
+    float Ki;
+    float Kd;
+    float integral;
+    float previous_error;
+    float dt;
+} PID_Controller;
+//这里的 Kp、Ki 和 Kd 是 PID 控制器的参数，分别控制比例、积分和微分部分
+float target_speed = 200.0f; // 设置目标转速
+float measured_speed = 0.0f;   // 实际转速
+float measured_current = 0.0f; // 实际电流
+float speed_output = 0.0f;     // 速度控制输出
+float current_output = 0.0f;   // 电流控制输出
+PID_Controller speed_pid;       // 定义速度 PID 控制器
+PID_Controller current_pid;     // 定义电流 PID 控制器
+// PID 控制器计算输出
+float PID_Compute(PID_Controller *pid, float setpoint, float measured_value) {
+    float error = setpoint - measured_value;
+    float derivative = (error - pid->previous_error) / pid->dt;
+    float output = pid->Kp * error + pid->Ki * pid->integral + pid->Kd * derivative;
+    pid->previous_error = error;
+	  pid->integral += error * pid->dt;
+    return output;
+}
+// PID 控制器初始化
+void PID_Init(PID_Controller *pid, float Kp, float Ki, float Kd, float dt) {
+    pid->Kp = Kp;
+    pid->Ki = Ki;
+    pid->Kd = Kd;
+    pid->integral = 0.0f;
+    pid->previous_error = 0.0f;
+    pid->dt = dt;
+}
+
 
 // 声明TIM1_PWM_Init函数
 void TIM1_PWM_Init(u32 arr, u32 psc);
@@ -13,11 +50,11 @@ void TIM8_PWM_Init(u32 arr, u32 psc);//设置互补波
 
 char buffer[100]; // 定义一个缓冲区用于存储要发送的数据
 extern int rpm;
-
+int k;
 int main(void)
 { 
     u16 pwmval = 100; // 初始占空比，范围：0-100
-		u16 pwmval1 = 50; // 初始占空比，范围：0-100
+		u16 pwmval1 =100; // 初始占空比，范围：0-100
 	
 	 	u16 uadc,IU,IV;
 		float temp,temp1,temp2,U,I1,I2;
@@ -40,12 +77,16 @@ int main(void)
 	
 		POINT_COLOR=RED;//设置字体为红色
 		LCD_ShowString(30,150,200,16,16,"UADC:0.000V");	//先在固定位置显示小数点   
-		LCD_ShowString(30,190,200,16,16,"IU:0.000V");	//先在固定位置显示小数点 
-		LCD_ShowString(30,230,200,16,16,"IV:0.000V");	//先在固定位置显示小数点 	
+		LCD_ShowString(30,190,200,16,16,"IU:0.000A");	//先在固定位置显示小数点 
+		LCD_ShowString(30,230,200,16,16,"IV:0.000A");	//先在固定位置显示小数点 	
 		LCD_ShowString(30,270,200,16,16,"rpm:0");
+		
+		PID_Init(&speed_pid, 1, 5, 0.01, 0.01);    // 设置速度 PID 参数（Kp, Ki, Kd, dt）
+    PID_Init(&current_pid, 1.0, 0.1, 0.01, 0.01);  // 设置电流 PID 参数（Kp, Ki, Kd, dt）
+		
     while(1) 
     {
-        delay_ms(10); // 控制更新速度，可根据需要调整
+        delay_ms(5); // 控制更新速度，可根据需要调整
 			
 				Calculate_Speed();  // 计算并打印转速
 			
@@ -70,11 +111,11 @@ int main(void)
         U=temp;
         I1=temp1;
         I2=temp2;				
-			
+			  k=rpm*2;
 				LCD_ShowxNum(69,150,uadc,1,16,0);    //显示电压值的整数部分，3.1111的话，这里就是显示3
 				LCD_ShowxNum(55,190,IU,1,16,0);
 				LCD_ShowxNum(55,230,IV,1,16,0);
-	      LCD_ShowxNum(62,270,rpm,4,16,0);
+	      LCD_ShowxNum(62,270,k,4,16,0);
 				
 				temp-=uadc;                           //把已经显示的整数部分去掉，留下小数部分，比如3.1111-3=0.1111
 				temp1-=IU;
@@ -87,8 +128,20 @@ int main(void)
 				LCD_ShowxNum(85,150,temp,3,16,0X80); //显示小数部分（前面转换为了整形显示），这里显示的就是111.
 				LCD_ShowxNum(71,190,temp,3,16,0X80);
 				LCD_ShowxNum(71,230,temp,3,16,0X80);
-	      snprintf(buffer, sizeof(buffer), "UADC: %.3f, IU: %.3f, IV: %.3f, RPM: %d\r\n", U, I1, I2, rpm);
+	      snprintf(buffer, sizeof(buffer), "UADC: %.3f, IU: %.3f, IV: %.3f, RPM: %d\r\n", U, I1, I2, k);
         USART_SendString(buffer); // 发送字符串到串口
-        delay_ms(50);				
+				
+				measured_speed=rpm;
+				measured_current=I1;
+        // 速度控制
+        speed_output = PID_Compute(&speed_pid, target_speed, measured_speed); // 计算速度控制输出
+				LCD_ShowxNum(62,300,speed_output,4,16,0);
+        speed_output=220-speed_output;
+				LCD_ShowxNum(62,330,speed_output,4,16,0);
+        // 将电流控制输出转换为 PWM 占空比
+        if (speed_output < 10) speed_output = 10; // 限制最小值
+        if (speed_output > 70) speed_output = 70; // 限制最大值
+				//pwmval1 = speed_output;
+							
     }
 	}
