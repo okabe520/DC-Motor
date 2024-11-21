@@ -11,16 +11,16 @@
 void TIM1_PWM_Init(u32 arr, u32 psc);
 void TIM8_PWM_Init(u32 arr, u32 psc);//设置互补波
 
-
+char buffer[100]; // 定义一个缓冲区用于存储要发送的数据
 extern int rpm;
 
 int main(void)
 { 
     u16 pwmval = 100; // 初始占空比，范围：0-100
-		u16 pwmval1 =50; // 初始占空比，范围：0-100
+		u16 pwmval1 = 50; // 初始占空比，范围：0-100
 	
 	 	u16 uadc,IU,IV;
-		float temp,temp1,temp2;
+		float temp,temp1,temp2,U,I1,I2;
 	
     NVIC_PriorityGroupConfig(NVIC_PriorityGroup_2); // 设置系统中断优先级组为2
     delay_init(168);  // 初始化延时函数
@@ -66,7 +66,10 @@ int main(void)
 			
 				uadc=temp;                            //赋值整数部分给adcx变量，因为adcx为u16整形
 				IU=temp1;
-				IV=temp2;			
+				IV=temp2;
+        U=temp;
+        I1=temp1;
+        I2=temp2;				
 			
 				LCD_ShowxNum(69,150,uadc,1,16,0);    //显示电压值的整数部分，3.1111的话，这里就是显示3
 				LCD_ShowxNum(55,190,IU,1,16,0);
@@ -84,6 +87,8 @@ int main(void)
 				LCD_ShowxNum(85,150,temp,3,16,0X80); //显示小数部分（前面转换为了整形显示），这里显示的就是111.
 				LCD_ShowxNum(71,190,temp,3,16,0X80);
 				LCD_ShowxNum(71,230,temp,3,16,0X80);
-	                
+	      snprintf(buffer, sizeof(buffer), "UADC: %.3f, IU: %.3f, IV: %.3f, RPM: %d\r\n", U, I1, I2, rpm);
+        USART_SendString(buffer); // 发送字符串到串口
+        delay_ms(50);				
     }
 	}
